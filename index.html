@@ -134,7 +134,7 @@
             <div class="tab" onclick="showTab('meet-goals', this)">Meet Goals</div>
             <div class="tab" onclick="showTab('practice-goals', this)">Practice Goals</div>
             <div class="tab" onclick="showTab('progression', this)">Progression</div>
-            <div class="tab" onclick="showTab(\'chunks-15m\', this)">15m Chunks</div>
+            <div class="tab" onclick="showTab('chunks15m', this)">15m Chunks</div>
         </div>
         
         <div id="personal-bests" class="content active">
@@ -399,32 +399,34 @@
             </div>
         </div>
         <div id="progression" class="content"><div class="card"><div class="card-title">Progression</div><div id="progression-content"></div></div></div>
-        
-        <div id="chunks-15m" class="content">
+    </div>
+        <div id="chunks15m" class="content">
             <div class="card">
-                <div class="card-title">15m Chunks Speed Chart</div>
+                <div class="card-title">15m Chunks Speed Chart - 100 LCM</div>
                 <p style="color: #666; margin-bottom: 1.5rem;">
-                    Ultra-detailed pacing for 100 LCM events. Shows 15m splits for start, turn, and finish segments.
-                    <strong>Gender neutral model</strong> - applies to both men and women.
+                    Ultra-detailed pacing for 100m events showing 15m splits. Gender neutral model.
                 </p>
                 
-                <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
-                    <select id="chunks-event-select" onchange="updateChunksDisplay()" style="flex: 1; min-width: 150px;">
-                        <option value="100-free">100 Free LCM</option>
-                        <option value="100-back">100 Back LCM</option>
-                        <option value="100-breast">100 Breast LCM</option>
-                        <option value="100-fly">100 Fly LCM</option>
+                <div style="margin-bottom: 1.5rem;">
+                    <select id="chunks-stroke" onchange="showChunks()" style="padding: 0.75rem; font-size: 1rem; border-radius: 6px;">
+                        <option value="free">100 Free LCM</option>
+                        <option value="back">100 Back LCM</option>
+                        <option value="breast">100 Breast LCM</option>
+                        <option value="fly">100 Fly LCM</option>
                     </select>
                     
-                    <select id="chunks-time-select" onchange="updateChunksDisplay()" style="flex: 1; min-width: 150px;">
-                        <!-- Populated dynamically -->
+                    <select id="chunks-time" onchange="showChunks()" style="padding: 0.75rem; font-size: 1rem; border-radius: 6px; margin-left: 1rem;">
+                        <option value="50">50.0s</option>
+                        <option value="52">52.0s</option>
+                        <option value="54">54.0s</option>
+                        <option value="56">56.0s</option>
+                        <option value="58">58.0s</option>
                     </select>
                 </div>
                 
-                <div id="chunks-display"></div>
+                <div id="chunks-result"></div>
             </div>
         </div>
-    </div>
     
     <script>
         function genPracticeGoals(pb) {
@@ -5662,545 +5664,68 @@
         }
         
         updateData();
-    
-        // ========== 15M CHUNKS FUNCTIONS ==========
-        
-        function updateChunksDisplay() {
-            const eventKey = document.getElementById('chunks-event-select').value;
-            const timeSelect = document.getElementById('chunks-time-select');
-            const display = document.getElementById('chunks-display');
+
+        function showChunks() {
+            const stroke = document.getElementById('chunks-stroke').value;
+            const time = parseFloat(document.getElementById('chunks-time').value);
             
-            // Get data for selected event
-            const eventData = chunksData[eventKey];
-            if (!eventData) {
-                display.innerHTML = '<div class="no-data">No data available</div>';
-                return;
-            }
+            // Simple hardcoded data for 50.0s (base)
+            const base = {
+                free: {start: 6.11, turn: 7.30, finish: 8.00},
+                back: {start: 5.86, turn: 6.82, finish: 8.15},
+                breast: {start: 5.22, turn: 7.19, finish: 8.29},
+                fly: {start: 5.57, turn: 7.51, finish: 8.11}
+            };
             
-            // Update time dropdown
-            if (timeSelect.options.length === 0 || timeSelect.dataset.event !== eventKey) {
-                timeSelect.innerHTML = '';
-                eventData.forEach(entry => {
-                    const opt = document.createElement('option');
-                    opt.value = entry.goal;
-                    opt.textContent = formatTime(entry.goal);
-                    timeSelect.appendChild(opt);
-                });
-                timeSelect.dataset.event = eventKey;
-            }
+            // Scale to selected time
+            const scale = time / 50.0;
+            const data = base[stroke];
+            const scaled = {
+                start: (data.start * scale).toFixed(2),
+                turn: (data.turn * scale).toFixed(2),
+                finish: (data.finish * scale).toFixed(2)
+            };
             
-            // Get selected time
-            const selectedTime = parseFloat(timeSelect.value);
-            const entry = eventData.find(e => e.goal === selectedTime);
-            
-            if (!entry) {
-                display.innerHTML = '<div class="no-data">No data found</div>';
-                return;
-            }
-            
-            // Build display
             const html = `
-                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2rem; border-radius: 8px; margin-bottom: 1.5rem;">
-                    <div style="font-size: 2.5rem; font-weight: bold; text-align: center;">
-                        ${formatTime(entry.goal)}
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2rem; border-radius: 8px; margin-bottom: 1.5rem; text-align: center;">
+                    <div style="font-size: 2.5rem; font-weight: bold;">${time.toFixed(1)}s</div>
+                    <div style="opacity: 0.9; margin-top: 0.5rem;">100 ${stroke.charAt(0).toUpperCase() + stroke.slice(1)} LCM</div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+                    <div style="background: #e7f3ff; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #667eea;">
+                        <div style="font-size: 0.85rem; color: #666; margin-bottom: 0.5rem;">15m FROM START</div>
+                        <div style="font-size: 2rem; font-weight: bold; color: #667eea;">${scaled.start}s</div>
+                        <div style="font-size: 0.75rem; color: #666; margin-top: 0.5rem;">Underwater + breakout</div>
                     </div>
-                    <div style="text-align: center; opacity: 0.9; margin-top: 0.5rem;">
-                        ${document.getElementById('chunks-event-select').options[document.getElementById('chunks-event-select').selectedIndex].text}
+                    
+                    <div style="background: #fff4e6; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #f59e0b;">
+                        <div style="font-size: 0.85rem; color: #666; margin-bottom: 0.5rem;">15m TURN OUT</div>
+                        <div style="font-size: 2rem; font-weight: bold; color: #f59e0b;">${scaled.turn}s</div>
+                        <div style="font-size: 0.75rem; color: #666; margin-top: 0.5rem;">7.5m in + 7.5m out</div>
+                    </div>
+                    
+                    <div style="background: #f0fdf4; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #10b981;">
+                        <div style="font-size: 0.85rem; color: #666; margin-bottom: 0.5rem;">15m TO FINISH</div>
+                        <div style="font-size: 2rem; font-weight: bold; color: #10b981;">${scaled.finish}s</div>
+                        <div style="font-size: 0.75rem; color: #666; margin-top: 0.5rem;">Final sprint to touch</div>
                     </div>
                 </div>
                 
-                <div class="checkpoint-grid" style="grid-template-columns: repeat(3, 1fr);">
-                    <div class="checkpoint" style="background: #e7f3ff; border-left: 4px solid #667eea;">
-                        <div class="checkpoint-label">15m FROM START</div>
-                        <div class="checkpoint-time">${formatTime(entry.start)}</div>
-                        <div style="font-size: 0.75rem; color: #666; margin-top: 0.25rem;">
-                            Underwater + breakout
-                        </div>
-                    </div>
-                    
-                    <div class="checkpoint" style="background: #fff4e6; border-left: 4px solid #f59e0b;">
-                        <div class="checkpoint-label">15m TURN OUT</div>
-                        <div class="checkpoint-time">${formatTime(entry.turn)}</div>
-                        <div style="font-size: 0.75rem; color: #666; margin-top: 0.25rem;">
-                            7.5m in + 7.5m out
-                        </div>
-                    </div>
-                    
-                    <div class="checkpoint" style="background: #f0fdf4; border-left: 4px solid #10b981;">
-                        <div class="checkpoint-label">15m TO FINISH</div>
-                        <div class="checkpoint-time">${formatTime(entry.finish)}</div>
-                        <div style="font-size: 0.75rem; color: #666; margin-top: 0.25rem;">
-                            Final sprint to touch
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="pacing-note" style="margin-top: 1.5rem;">
-                    <strong>💡 How to use:</strong> These 15m chunks help identify weak spots in your race execution. 
-                    Compare your actual splits to these targets:
-                    <ul style="margin: 0.5rem 0 0 1.5rem;">
-                        <li><strong>Start:</strong> Underwater efficiency and breakout timing</li>
-                        <li><strong>Turn:</strong> Wall approach + push-off power + streamline</li>
-                        <li><strong>Finish:</strong> Final 15m sprint + touch technique</li>
-                    </ul>
+                <div style="background: #e7f3ff; padding: 1rem; border-radius: 6px; margin-top: 1.5rem; font-size: 0.9rem;">
+                    <strong>💡 How to use:</strong> Compare your actual 15m splits to these targets to identify weak spots in underwater efficiency, turn execution, and finish sprint.
                 </div>
             `;
             
-            display.innerHTML = html;
+            document.getElementById('chunks-result').innerHTML = html;
         }
         
-        // Chunks data (embedded inline)
-        const chunksData = {
-        "100-free": [
-                {
-                        "goal": 45.0,
-                        "start": 5.4,
-                        "turn": 6.55,
-                        "finish": 7.24
-                },
-                {
-                        "goal": 45.5,
-                        "start": 5.47,
-                        "turn": 6.62,
-                        "finish": 7.31
-                },
-                {
-                        "goal": 46.0,
-                        "start": 5.54,
-                        "turn": 6.7,
-                        "finish": 7.39
-                },
-                {
-                        "goal": 46.5,
-                        "start": 5.61,
-                        "turn": 6.77,
-                        "finish": 7.47
-                },
-                {
-                        "goal": 47.0,
-                        "start": 5.69,
-                        "turn": 6.85,
-                        "finish": 7.54
-                },
-                {
-                        "goal": 47.5,
-                        "start": 5.76,
-                        "turn": 6.92,
-                        "finish": 7.62
-                },
-                {
-                        "goal": 48.0,
-                        "start": 5.83,
-                        "turn": 7.0,
-                        "finish": 7.7
-                },
-                {
-                        "goal": 48.5,
-                        "start": 5.9,
-                        "turn": 7.07,
-                        "finish": 7.77
-                },
-                {
-                        "goal": 49.0,
-                        "start": 5.97,
-                        "turn": 7.15,
-                        "finish": 7.85
-                },
-                {
-                        "goal": 50.0,
-                        "start": 6.11,
-                        "turn": 7.3,
-                        "finish": 8.0
-                },
-                {
-                        "goal": 51.0,
-                        "start": 6.26,
-                        "turn": 7.45,
-                        "finish": 8.15
-                },
-                {
-                        "goal": 52.0,
-                        "start": 6.4,
-                        "turn": 7.6,
-                        "finish": 8.31
-                },
-                {
-                        "goal": 53.0,
-                        "start": 6.54,
-                        "turn": 7.76,
-                        "finish": 8.46
-                },
-                {
-                        "goal": 54.0,
-                        "start": 6.68,
-                        "turn": 7.91,
-                        "finish": 8.62
-                },
-                {
-                        "goal": 55.0,
-                        "start": 6.83,
-                        "turn": 8.06,
-                        "finish": 8.77
-                },
-                {
-                        "goal": 56.0,
-                        "start": 6.97,
-                        "turn": 8.21,
-                        "finish": 8.92
-                },
-                {
-                        "goal": 57.0,
-                        "start": 7.11,
-                        "turn": 8.36,
-                        "finish": 9.08
-                },
-                {
-                        "goal": 58.0,
-                        "start": 7.25,
-                        "turn": 8.51,
-                        "finish": 9.23
-                }
-        ],
-        "100-back": [
-                {
-                        "goal": 45.0,
-                        "start": 4.99,
-                        "turn": 5.99,
-                        "finish": 7.42
-                },
-                {
-                        "goal": 45.5,
-                        "start": 5.07,
-                        "turn": 6.07,
-                        "finish": 7.49
-                },
-                {
-                        "goal": 46.0,
-                        "start": 5.16,
-                        "turn": 6.16,
-                        "finish": 7.57
-                },
-                {
-                        "goal": 46.5,
-                        "start": 5.25,
-                        "turn": 6.24,
-                        "finish": 7.64
-                },
-                {
-                        "goal": 47.0,
-                        "start": 5.33,
-                        "turn": 6.32,
-                        "finish": 7.71
-                },
-                {
-                        "goal": 47.5,
-                        "start": 5.42,
-                        "turn": 6.4,
-                        "finish": 7.78
-                },
-                {
-                        "goal": 48.0,
-                        "start": 5.51,
-                        "turn": 6.49,
-                        "finish": 7.86
-                },
-                {
-                        "goal": 48.5,
-                        "start": 5.59,
-                        "turn": 6.57,
-                        "finish": 7.93
-                },
-                {
-                        "goal": 49.0,
-                        "start": 5.68,
-                        "turn": 6.65,
-                        "finish": 8.0
-                },
-                {
-                        "goal": 50.0,
-                        "start": 5.86,
-                        "turn": 6.82,
-                        "finish": 8.15
-                },
-                {
-                        "goal": 51.0,
-                        "start": 6.03,
-                        "turn": 6.98,
-                        "finish": 8.29
-                },
-                {
-                        "goal": 52.0,
-                        "start": 6.2,
-                        "turn": 7.14,
-                        "finish": 8.43
-                },
-                {
-                        "goal": 53.0,
-                        "start": 6.38,
-                        "turn": 7.31,
-                        "finish": 8.58
-                },
-                {
-                        "goal": 54.0,
-                        "start": 6.55,
-                        "turn": 7.47,
-                        "finish": 8.72
-                },
-                {
-                        "goal": 55.0,
-                        "start": 6.72,
-                        "turn": 7.64,
-                        "finish": 8.87
-                },
-                {
-                        "goal": 56.0,
-                        "start": 6.89,
-                        "turn": 7.8,
-                        "finish": 9.01
-                },
-                {
-                        "goal": 57.0,
-                        "start": 7.07,
-                        "turn": 7.96,
-                        "finish": 9.16
-                },
-                {
-                        "goal": 58.0,
-                        "start": 7.24,
-                        "turn": 8.13,
-                        "finish": 9.3
-                }
-        ],
-        "100-breast": [
-                {
-                        "goal": 45.0,
-                        "start": 4.46,
-                        "turn": 6.41,
-                        "finish": 7.55
-                },
-                {
-                        "goal": 45.5,
-                        "start": 4.54,
-                        "turn": 6.49,
-                        "finish": 7.63
-                },
-                {
-                        "goal": 46.0,
-                        "start": 4.61,
-                        "turn": 6.56,
-                        "finish": 7.7
-                },
-                {
-                        "goal": 46.5,
-                        "start": 4.69,
-                        "turn": 6.64,
-                        "finish": 7.77
-                },
-                {
-                        "goal": 47.0,
-                        "start": 4.77,
-                        "turn": 6.72,
-                        "finish": 7.85
-                },
-                {
-                        "goal": 47.5,
-                        "start": 4.84,
-                        "turn": 6.8,
-                        "finish": 7.92
-                },
-                {
-                        "goal": 48.0,
-                        "start": 4.92,
-                        "turn": 6.87,
-                        "finish": 7.99
-                },
-                {
-                        "goal": 48.5,
-                        "start": 4.99,
-                        "turn": 6.95,
-                        "finish": 8.07
-                },
-                {
-                        "goal": 49.0,
-                        "start": 5.07,
-                        "turn": 7.03,
-                        "finish": 8.14
-                },
-                {
-                        "goal": 50.0,
-                        "start": 5.22,
-                        "turn": 7.19,
-                        "finish": 8.29
-                },
-                {
-                        "goal": 51.0,
-                        "start": 5.37,
-                        "turn": 7.34,
-                        "finish": 8.43
-                },
-                {
-                        "goal": 52.0,
-                        "start": 5.52,
-                        "turn": 7.5,
-                        "finish": 8.58
-                },
-                {
-                        "goal": 53.0,
-                        "start": 5.68,
-                        "turn": 7.65,
-                        "finish": 8.73
-                },
-                {
-                        "goal": 54.0,
-                        "start": 5.83,
-                        "turn": 7.81,
-                        "finish": 8.87
-                },
-                {
-                        "goal": 55.0,
-                        "start": 5.98,
-                        "turn": 7.96,
-                        "finish": 9.02
-                },
-                {
-                        "goal": 56.0,
-                        "start": 6.13,
-                        "turn": 8.12,
-                        "finish": 9.17
-                },
-                {
-                        "goal": 57.0,
-                        "start": 6.29,
-                        "turn": 8.27,
-                        "finish": 9.31
-                },
-                {
-                        "goal": 58.0,
-                        "start": 6.44,
-                        "turn": 8.43,
-                        "finish": 9.46
-                }
-        ],
-        "100-fly": [
-                {
-                        "goal": 45.0,
-                        "start": 4.82,
-                        "turn": 6.74,
-                        "finish": 7.31
-                },
-                {
-                        "goal": 45.5,
-                        "start": 4.89,
-                        "turn": 6.82,
-                        "finish": 7.39
-                },
-                {
-                        "goal": 46.0,
-                        "start": 4.97,
-                        "turn": 6.9,
-                        "finish": 7.47
-                },
-                {
-                        "goal": 46.5,
-                        "start": 5.04,
-                        "turn": 6.97,
-                        "finish": 7.55
-                },
-                {
-                        "goal": 47.0,
-                        "start": 5.12,
-                        "turn": 7.05,
-                        "finish": 7.63
-                },
-                {
-                        "goal": 47.5,
-                        "start": 5.19,
-                        "turn": 7.13,
-                        "finish": 7.71
-                },
-                {
-                        "goal": 48.0,
-                        "start": 5.27,
-                        "turn": 7.21,
-                        "finish": 7.79
-                },
-                {
-                        "goal": 48.5,
-                        "start": 5.34,
-                        "turn": 7.28,
-                        "finish": 7.87
-                },
-                {
-                        "goal": 49.0,
-                        "start": 5.42,
-                        "turn": 7.36,
-                        "finish": 7.95
-                },
-                {
-                        "goal": 50.0,
-                        "start": 5.57,
-                        "turn": 7.51,
-                        "finish": 8.11
-                },
-                {
-                        "goal": 51.0,
-                        "start": 5.72,
-                        "turn": 7.67,
-                        "finish": 8.27
-                },
-                {
-                        "goal": 52.0,
-                        "start": 5.87,
-                        "turn": 7.82,
-                        "finish": 8.43
-                },
-                {
-                        "goal": 53.0,
-                        "start": 6.03,
-                        "turn": 7.98,
-                        "finish": 8.6
-                },
-                {
-                        "goal": 54.0,
-                        "start": 6.18,
-                        "turn": 8.13,
-                        "finish": 8.76
-                },
-                {
-                        "goal": 55.0,
-                        "start": 6.33,
-                        "turn": 8.29,
-                        "finish": 8.92
-                },
-                {
-                        "goal": 56.0,
-                        "start": 6.48,
-                        "turn": 8.44,
-                        "finish": 9.08
-                },
-                {
-                        "goal": 57.0,
-                        "start": 6.63,
-                        "turn": 8.6,
-                        "finish": 9.24
-                },
-                {
-                        "goal": 58.0,
-                        "start": 6.78,
-                        "turn": 8.75,
-                        "finish": 9.4
-                }
-        ]
-};
-        
-        // Initialize chunks display on page load
-        if (typeof document !== 'undefined') {
-            document.addEventListener('DOMContentLoaded', function() {
-                if (document.getElementById('chunks-event-select')) {
-                    updateChunksDisplay();
-                }
-            });
-        }
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            if (document.getElementById('chunks-stroke')) {
+                showChunks();
+            }
+        });
         
     </script>
 </body>
